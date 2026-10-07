@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASCII Art QR</title>
+<style>
+  :root { --bg: #0e0b0a; --text: #e4e9ee; --muted: #918b9b; --accent: #ffe14d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+  .kicker { letter-spacing: .2em; color: var(--muted); font-weight: 600; font-size: 14px; }
+  h1 { font-family: "Courier New", ui-monospace, monospace; color: var(--accent); font-size: clamp(36px, 7vw, 72px);
+    margin: 6px 0 4px; letter-spacing: .06em; }
+  p { font-size: clamp(16px, 2.6vw, 26px); margin: 0 0 26px; }
+  #qr { background: #fff; padding: 22px; border-radius: 22px; }
+  #qr img, #qr canvas { display: block; width: min(62vh, 80vw) !important; height: auto !important; image-rendering: pixelated; }
+  .url { margin-top: 18px; color: var(--muted); font-size: 16px; word-break: break-all; }
+  .err { color: #ff8080; max-width: 520px; }
+  @media print { body { background: #fff; color: #000; } .kicker, .url { color: #444; } h1 { color: #000; } }
+</style>
+</head>
+<body>
+  <div class="kicker">OPENCV FUN ZONE</div>
+  <h1>ASCII ART</h1>
+  <p>Scan → take a selfie → save your ASCII art</p>
+  <div id="qr"></div>
+  <div class="url" id="url"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // The QR points to index.html in the same folder as this page, so no link needs to be typed in.
+    // Add ?url=https://... to this page's address to make a QR for any other link instead.
+    const custom = new URLSearchParams(location.search).get('url');
+    const target = custom || new URL('./', location.href).href;
+    document.getElementById('url').textContent = target;
+    if (window.QRCode) {
+      new QRCode(document.getElementById('qr'), { text: target, width: 1024, height: 1024,
+        colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      document.getElementById('qr').outerHTML =
+        '<p class="err">Could not load the QR library (no internet?). Open this page online, or make a QR for the link below with any QR website.</p>';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASCII Art</title>
+<meta name="description" content="Turn your photo into ASCII art, right in your browser.">
+<meta name="theme-color" content="#0e0b0a">
+<style>
+  :root {
+    --bg: #0e0b0a; --panel: #1b1613; --panel2: #27201b; --line: #3c332c;
+    --text: #e4e9ee; --muted: #918b9b; --accent: #ffe14d; --accent-ink: #1a1400; --cyan: #46d7ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    padding: 18px 16px 40px; }
+  main { width: 100%; max-width: 720px; }
+  header { margin-bottom: 18px; }
+  .kicker { font-size: 12px; letter-spacing: .18em; color: var(--muted); font-weight: 600; }
+  h1 { margin: 4px 0 0; font-size: 34px; letter-spacing: .06em; color: var(--accent);
+    font-family: "Courier New", ui-monospace, monospace; font-weight: 800; }
+  .sub { color: var(--muted); margin: 6px 0 0; font-size: 15px; }
+  .bar { height: 4px; background: var(--accent); border-radius: 2px; margin-top: 14px; }
+
+  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px;
+    border-radius: 14px; border: 1px solid var(--line); background: var(--panel2); color: var(--text);
+    font-size: 16px; font-weight: 600; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn:active { transform: scale(.98); }
+  .btn[hidden] { display: none; }
+  input[type=file] { display: none; }
+
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px;
+    min-height: 220px; display: flex; align-items: center; justify-content: center; }
+  .stage .empty { color: var(--muted); text-align: center; line-height: 1.6; padding: 30px 10px;
+    font-family: "Courier New", ui-monospace, monospace; }
+  #out { max-width: 100%; height: auto; border-radius: 8px; display: none; }
+
+  .controls { background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 14px 16px; margin-top: 14px; display: none; }
+  .row { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+  .row label { width: 72px; color: var(--muted); font-size: 14px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); min-width: 140px; }
+  .seg { display: flex; flex: 1; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--text); padding: 9px 4px;
+    border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .val { width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); font-size: 14px; }
+
+  .save { display: none; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+  footer { margin-top: 26px; color: var(--muted); font-size: 12px; text-align: center; line-height: 1.6; }
+  footer code { color: var(--cyan); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="kicker">OPENCV FUN ZONE</div>
+    <h1>ASCII ART</h1>
+    <p class="sub">Your photo, redrawn with keyboard characters.</p>
+    <div class="bar"></div>
+  </header>
+
+  <div class="pick">
+    <label class="btn primary" for="camera">📷 Take a selfie</label>
+    <label class="btn" for="gallery">🖼️ Choose a photo</label>
+    <input id="camera" type="file" accept="image/*" capture="user">
+    <input id="gallery" type="file" accept="image/*">
+  </div>
+
+  <div class="stage">
+    <div class="empty" id="empty">@%#*+=-:. <br>take or choose a photo<br>.:-=+*#%@</div>
+    <canvas id="out" aria-label="ASCII art result"></canvas>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="row">
+      <label for="detail">Detail</label>
+      <input id="detail" type="range" min="40" max="160" step="5" value="90">
+      <span class="val" id="detailVal">90</span>
+    </div>
+    <div class="row">
+      <label>Style</label>
+      <div class="seg" id="style">
+        <button data-v="paper" class="on">Paper</button>
+        <button data-v="terminal">Hacker</button>
+        <button data-v="colour">Colour</button>
+      </div>
+    </div>
+    <div class="row">
+      <label>Letters</label>
+      <div class="seg" id="ramp">
+        <button data-v=" .:-=+*#%@" class="on">Classic</button>
+        <button data-v=" .'`^&quot;,:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&amp;8%B@$">Detailed</button>
+        <button data-v=" 10">Binary</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="save" id="save">
+    <button class="btn primary" id="download">⬇️ Save image</button>
+    <button class="btn" id="share" hidden>📤 Share</button>
+  </div>
+  <p class="hint" id="hint">If saving doesn't start, long-press the picture and choose <b>Save image</b>.</p>
+
+  <footer>
+    Your photo never leaves your phone: everything runs in this page.<br>
+    gray <code>= 0.299R + 0.587G + 0.114B</code> → average per block → one character per brightness range
+  </footer>
+</main>
+
+<script>
+(() => {
+  const CELL_W = 8, CELL_H = 14;          // size of one character in the saved image (letters are ~2x taller than wide)
+  const SCALE = 2;                        // render at 2x so the saved PNG is sharp
+  const out = document.getElementById('out');
+  const ctx = out.getContext('2d');
+  const work = document.createElement('canvas');
+  const wctx = work.getContext('2d', { willReadFrequently: true });
+  const state = { img: null, cols: 90, style: 'paper', ramp: ' .:-=+*#%@' };
+
+  function render() {
+    const img = state.img;
+    if (!img) return;
+    const cols = state.cols;
+    const rows = Math.max(1, Math.round(cols * (img.height / img.width) * (CELL_W / CELL_H)));
+
+    // 1. shrink the photo so each pixel = one character block (the browser averages the pixels for us)
+    work.width = cols; work.height = rows;
+    wctx.drawImage(img, 0, 0, cols, rows);
+    const px = wctx.getImageData(0, 0, cols, rows).data;
+
+    out.width = cols * CELL_W * SCALE;
+    out.height = rows * CELL_H * SCALE;
+    const paper = state.style === 'paper';
+    ctx.fillStyle = paper ? '#ffffff' : '#000000';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.font = `bold ${CELL_H * SCALE * 0.92}px "Courier New", ui-monospace, monospace`;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+
+    const ramp = state.ramp, n = ramp.length;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const i = (y * cols + x) * 4;
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;          // 2. brightness
+        let level = Math.min(n - 1, Math.floor(gray * n / 256));  // 3. which brightness range
+        const idx = paper ? n - 1 - level : level;                // dark ink on paper, light ink on black
+        const ch = ramp[idx];                                     // 4. -> character
+        if (ch === ' ') continue;
+        if (state.style === 'colour') {
+          ctx.fillStyle = `rgb(${Math.min(255, r * 1.25 + 20)},${Math.min(255, g * 1.25 + 20)},${Math.min(255, b * 1.25 + 20)})`;
+        } else {
+          ctx.fillStyle = paper ? '#000000' : '#39ff7a';
+        }
+        ctx.fillText(ch, (x + 0.5) * CELL_W * SCALE, y * CELL_H * SCALE);
+      }
+    }
+    document.getElementById('empty').style.display = 'none';
+    out.style.display = 'block';
+    document.getElementById('controls').style.display = 'block';
+    document.getElementById('save').style.display = 'grid';
+  }
+  window.renderAscii = render;
+  window.asciiState = state;
+
+  function load(file) {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {                    // browsers apply the photo's rotation (EXIF) automatically
+      state.img = img;
+      render();
+      out.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+    img.onerror = () => alert('Sorry, that file could not be opened as a picture.');
+    img.src = url;
+  }
+  window.loadAsciiImage = (img) => { state.img = img; render(); };
+
+  for (const id of ['camera', 'gallery']) {
+    document.getElementById(id).addEventListener('change', (e) => { load(e.target.files[0]); e.target.value = ''; });
+  }
+
+  const detail = document.getElementById('detail');
+  detail.addEventListener('input', () => {
+    state.cols = +detail.value;
+    document.getElementById('detailVal').textContent = detail.value;
+    render();
+  });
+  for (const [groupId, key] of [['style', 'style'], ['ramp', 'ramp']]) {
+    const group = document.getElementById(groupId);
+    group.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      group.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+      state[key] = b.dataset.v;
+      render();
+    });
+  }
+
+  function toBlob() {
+    return new Promise((res) => out.toBlob(res, 'image/png'));
+  }
+  document.getElementById('download').addEventListener('click', async () => {
+    const blob = await toBlob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'my-ascii-art.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    document.getElementById('hint').style.display = 'block';
+  });
+
+  // phones: share sheet (lets people "Save to Photos" or send it on)
+  const shareBtn = document.getElementById('share');
+  if (navigator.canShare && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] })) {
+    shareBtn.hidden = false;
+    shareBtn.addEventListener('click', async () => {
+      const file = new File([await toBlob()], 'my-ascii-art.png', { type: 'image/png' });
+      try { await navigator.share({ files: [file], title: 'My ASCII art' }); } catch (e) { /* cancelled */ }
+    });
+  }
+})();
+</script>
+</body>
+</html>
